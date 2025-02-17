@@ -28,5 +28,17 @@ go run main.go
 
 ## Options
 
-- -max-checks → Maximum concurrent proxy checks (default: 5000)
+- -max-checks → Maximum concurrent proxy checks (default: 5000) I recommend lowering this for a better output even if it takes more time
 - -target → IP and port to test proxies against (default: 1.1.1.1:80)
+
+## Example
+```sh
+go run main.go -target 1.1.1.1:80 -max-checks 100
+```
+
+## TODO
+- Make a better sanitization system
+- Add timeout control via flag
+- Anything else that I think off
+
+Thanks for using!
