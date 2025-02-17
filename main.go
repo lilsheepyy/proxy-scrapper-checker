@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -26,10 +27,18 @@ type ProxyChecker struct {
 	ProgressCallback func(int)
 	CancelContext    context.Context
 	CancelFunc       context.CancelFunc
+	Target           string
+	TargetIP         string
+	TargetPort       int
 }
 
-func NewProxyChecker(proxyURLs map[string][]string, timeout time.Duration, maxRetries int, retryDelay time.Duration, maxWorkers int, logCallback func(string), progressCallback func(int)) *ProxyChecker {
+func NewProxyChecker(proxyURLs map[string][]string, timeout time.Duration, maxRetries int, retryDelay time.Duration, maxWorkers int, logCallback func(string), progressCallback func(int), target string) *ProxyChecker {
 	ctx, cancel := context.WithCancel(context.Background())
+
+	targetParts := strings.Split(target, ":")
+	targetIP := targetParts[0]
+	targetPort, _ := strconv.Atoi(targetParts[1])
+
 	return &ProxyChecker{
 		ProxyURLs:        proxyURLs,
 		Timeout:          timeout,
@@ -40,6 +49,9 @@ func NewProxyChecker(proxyURLs map[string][]string, timeout time.Duration, maxRe
 		ProgressCallback: progressCallback,
 		CancelContext:    ctx,
 		CancelFunc:       cancel,
+		Target:           target,
+		TargetIP:         targetIP,
+		TargetPort:       targetPort,
 	}
 }
 
@@ -57,7 +69,7 @@ func (pc *ProxyChecker) Cancel() {
 	pc.Log("INFO", "Cancellation requested")
 }
 
-// Verifies if a SOCKS4 proxy is working
+// Verifies SOCKS4 proxies
 func (pc *ProxyChecker) CheckSOCKS4(proxy string) bool {
 	ctx, cancel := context.WithTimeout(pc.CancelContext, pc.Timeout)
 	defer cancel()
@@ -72,8 +84,13 @@ func (pc *ProxyChecker) CheckSOCKS4(proxy string) bool {
 	deadline := time.Now().Add(pc.Timeout)
 	conn.SetDeadline(deadline)
 
+	// Convert target IP and port to byte format for SOCKS4 (this is done for the -target flag)
+	ip := net.ParseIP(pc.TargetIP).To4()
+	port := uint16(pc.TargetPort)
+	portBytes := []byte{byte(port >> 8), byte(port & 0xFF)}
+
 	// SOCKS4 handshake
-	_, err = conn.Write([]byte{0x04, 0x01, 0x00, 0x50, 0x01, 0x01, 0x01, 0x01, 0x00})
+	_, err = conn.Write([]byte{0x04, 0x01, 0x00, 0x50, ip[0], ip[1], ip[2], ip[3], portBytes[0], portBytes[1]})
 	if err != nil {
 		return false
 	}
@@ -84,11 +101,11 @@ func (pc *ProxyChecker) CheckSOCKS4(proxy string) bool {
 		return false
 	}
 
-	// Check if the connection was successful
+	// Check if the conn was successful
 	return response[1] == 0x5A
 }
 
-// Verifies if a SOCKS5 proxy is working
+// Verifies SOCKS5 proxies
 func (pc *ProxyChecker) CheckSOCKS5(proxy string) bool {
 	ctx, cancel := context.WithTimeout(pc.CancelContext, pc.Timeout)
 	defer cancel()
@@ -120,8 +137,13 @@ func (pc *ProxyChecker) CheckSOCKS5(proxy string) bool {
 		return false
 	}
 
-	// Send connection request to 1.1.1.1:80
-	_, err = conn.Write([]byte{0x05, 0x01, 0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00, 0x50})
+	// Convert target IP and port to byte format for SOCKS5 (this is done for the -target flag)
+	ip := net.ParseIP(pc.TargetIP).To4()
+	port := uint16(pc.TargetPort)
+	portBytes := []byte{byte(port >> 8), byte(port & 0xFF)}
+
+	// Send conn request
+	_, err = conn.Write([]byte{0x05, 0x01, 0x00, 0x01, ip[0], ip[1], ip[2], ip[3], portBytes[0], portBytes[1]})
 	if err != nil {
 		return false
 	}
@@ -132,11 +154,11 @@ func (pc *ProxyChecker) CheckSOCKS5(proxy string) bool {
 		return false
 	}
 
-	// Check if the connection was successful
+	// Check if the conn was successful
 	return response[1] == 0x00
 }
 
-// Verifies if an HTTP proxy is working using the CONNECT method
+// Verifies HTTP proxies
 func (pc *ProxyChecker) CheckHTTP(proxy string) bool {
 	ctx, cancel := context.WithTimeout(pc.CancelContext, pc.Timeout)
 	defer cancel()
@@ -151,8 +173,8 @@ func (pc *ProxyChecker) CheckHTTP(proxy string) bool {
 	deadline := time.Now().Add(pc.Timeout)
 	conn.SetDeadline(deadline)
 
-	// Send CONNECT request to the proxy
-	connectRequest := "CONNECT 1.1.1.1:80 HTTP/1.1\r\nHost: 1.1.1.1:80\r\n\r\n"
+	// Send CONNECT request
+	connectRequest := fmt.Sprintf("CONNECT %s HTTP/1.1\r\nHost: %s\r\n\r\n", pc.Target, pc.Target)
 	_, err = conn.Write([]byte(connectRequest))
 	if err != nil {
 		return false
@@ -164,7 +186,7 @@ func (pc *ProxyChecker) CheckHTTP(proxy string) bool {
 		return false
 	}
 
-	// Check if the response indicates a successful connection
+	// Check if the conn was successful
 	return strings.HasPrefix(response, "HTTP/1.1 200")
 }
 
@@ -203,12 +225,23 @@ func (pc *ProxyChecker) GetProxies(urls []string) []string {
 	return allProxies
 }
 
-// Removes duplicate proxies from the list
+// Sanitize scraped proxies removes duplicated etc
 func (pc *ProxyChecker) SanitizeProxies(proxies []string) []string {
 	uniqueProxies := make(map[string]struct{})
 	for _, proxy := range proxies {
-		uniqueProxies[proxy] = struct{}{}
+		proxy = strings.TrimSpace(proxy)
+		proxy = strings.TrimPrefix(proxy, "http://")
+		proxy = strings.TrimPrefix(proxy, "https://")
+		proxy = strings.TrimPrefix(proxy, "socks4://")
+		proxy = strings.TrimPrefix(proxy, "socks5://")
+
+		parts := strings.Split(proxy, ":")
+		if len(parts) >= 2 {
+			ipPort := fmt.Sprintf("%s:%s", parts[0], parts[1])
+			uniqueProxies[ipPort] = struct{}{}
+		}
 	}
+
 	var sanitized []string
 	for proxy := range uniqueProxies {
 		sanitized = append(sanitized, proxy)
@@ -255,7 +288,7 @@ func (pc *ProxyChecker) LoadProxiesFromTempFile(tempFile string) []string {
 	return proxies
 }
 
-// Updates the progress bar in the terminal
+// Progress bar
 func (pc *ProxyChecker) UpdateProgressBar(processed, total int) {
 	progress := float64(processed) / float64(total)
 	barLength := 50
@@ -264,7 +297,7 @@ func (pc *ProxyChecker) UpdateProgressBar(processed, total int) {
 	fmt.Printf("\r[%s] %.0f%%", bar, progress*100)
 }
 
-// Checks the functionality of proxies and saves the working ones
+// Checks proxies
 func (pc *ProxyChecker) ProcessProxies(proxyType string, urls []string, maxChecks int) int {
 	rawProxies := pc.GetProxies(urls)
 	sanitized := pc.SanitizeProxies(rawProxies)
@@ -284,11 +317,10 @@ func (pc *ProxyChecker) ProcessProxies(proxyType string, urls []string, maxCheck
 	tokens := make(chan struct{}, maxChecks)
 	processed := 0
 
-	// Update progress bar periodically
 	go func() {
 		for processed < total {
 			pc.UpdateProgressBar(processed, total)
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(300 * time.Millisecond)
 		}
 	}()
 
@@ -323,7 +355,7 @@ func (pc *ProxyChecker) ProcessProxies(proxyType string, urls []string, maxCheck
 	return len(workingProxies)
 }
 
-// Saves the working proxies to a final file
+// Saves the working proxies
 func (pc *ProxyChecker) SaveWorkingProxies(proxyType string, proxies []string) {
 	finalDir := "proxies"
 	os.MkdirAll(finalDir, os.ModePerm)
@@ -350,14 +382,14 @@ func (pc *ProxyChecker) Run(maxChecks int) {
 		if pc.CancelContext.Err() != nil {
 			break
 		}
-		pc.Log("INFO", fmt.Sprintf("\n%s", strings.Repeat("=", 40)))
+		pc.Log("INFO", fmt.Sprintf("%s", strings.Repeat("=", 40)))
 		pc.Log("INFO", fmt.Sprintf("Processing %s proxies", strings.ToUpper(proxyType)))
 		pc.Log("INFO", fmt.Sprintf("%s", strings.Repeat("=", 40)))
 		pc.ProcessProxies(proxyType, urls, maxChecks)
 	}
 }
 
-// Loads proxy URLs from a JSON file
+// Loads proxy URLs from the JSON file
 func LoadURLsFromJSON(filePath string) map[string][]string {
 	data, err := ioutil.ReadFile(filePath)
 	if err != nil {
@@ -372,7 +404,8 @@ func LoadURLsFromJSON(filePath string) map[string][]string {
 }
 
 func main() {
-	maxChecks := flag.Int("maximum-checks", 5000, "Maximum number of concurrent proxy checks")
+	maxChecks := flag.Int("max-checks", 5000, "Maximum number of concurrent proxy checks")
+	target := flag.String("target", "1.1.1.1:80", "Target IP and Port for checking proxies in the format ip:port")
 	flag.Parse()
 
 	proxyURLs := LoadURLsFromJSON("urls.json")
@@ -384,7 +417,7 @@ func main() {
 		log.Printf("Progress: %d%%\n", progress)
 	}
 
-	checker := NewProxyChecker(proxyURLs, 5*time.Second, 0, 1*time.Second, 50, logCallback, progressCallback)
+	checker := NewProxyChecker(proxyURLs, 5*time.Second, 0, 1*time.Second, 50, logCallback, progressCallback, *target)
 	defer checker.Cancel()
 
 	log.Println("Starting proxy checking Press Ctrl+C to cancel")
