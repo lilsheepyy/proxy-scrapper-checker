@@ -450,7 +450,10 @@ func main() {
 	blue := "\033[34m"
 	reset := "\033[0m"
 
+	asciiCat := " ~ᓚᘏᗢ~  zZz"
+
 	fmt.Println(yellow + "============================================" + reset)
+	fmt.Println(blue + asciiCat + reset)
 	fmt.Println(green + " Proxy Checker by " + red + "lilsheepyy" + reset)
 	fmt.Println(blue + " GitHub: https://github.com/lilsheepyy" + reset)
 	fmt.Println(yellow + "============================================" + reset)
