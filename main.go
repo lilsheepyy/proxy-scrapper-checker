@@ -56,7 +56,26 @@ func NewProxyChecker(proxyURLs map[string][]string, timeout time.Duration, maxRe
 }
 
 func (pc *ProxyChecker) Log(level, message string) {
-	fullMessage := fmt.Sprintf("%s: %s", level, message)
+	// ANSI color codes
+	red := "\033[31m"
+	//green := "\033[32m"
+	yellow := "\033[33m"
+	blue := "\033[34m"
+	reset := "\033[0m"
+
+	var color string
+	switch level {
+	case "INFO":
+		color = blue
+	case "WARNING":
+		color = yellow
+	case "ERROR":
+		color = red
+	default:
+		color = reset
+	}
+
+	fullMessage := fmt.Sprintf("%s[%s] %s%s", color, level, message, reset)
 	if pc.LogCallback != nil {
 		pc.LogCallback(fullMessage)
 	} else {
@@ -290,10 +309,13 @@ func (pc *ProxyChecker) LoadProxiesFromTempFile(tempFile string) []string {
 
 // Progress bar
 func (pc *ProxyChecker) UpdateProgressBar(processed, total int) {
+	green := "\033[32m"
+	reset := "\033[0m"
+
 	progress := float64(processed) / float64(total)
 	barLength := 50
 	filled := int(progress * float64(barLength))
-	bar := strings.Repeat("=", filled) + strings.Repeat(" ", barLength-filled)
+	bar := green + strings.Repeat("=", filled) + reset + strings.Repeat(" ", barLength-filled)
 	fmt.Printf("\r[%s] %.0f%%", bar, progress*100)
 }
 
@@ -404,8 +426,9 @@ func LoadURLsFromJSON(filePath string) map[string][]string {
 }
 
 func main() {
-	maxChecks := flag.Int("max-checks", 5000, "Maximum number of concurrent proxy checks")
+	maxChecks := flag.Int("max-checks", 1000, "Maximum number of concurrent proxy checks")
 	target := flag.String("target", "1.1.1.1:80", "Target IP and Port for checking proxies in the format ip:port")
+	timeout := flag.Int("timeout", 5, "Timeout in seconds for proxy connections")
 	flag.Parse()
 
 	proxyURLs := LoadURLsFromJSON("urls.json")
@@ -417,10 +440,21 @@ func main() {
 		log.Printf("Progress: %d%%\n", progress)
 	}
 
-	checker := NewProxyChecker(proxyURLs, 5*time.Second, 0, 1*time.Second, 50, logCallback, progressCallback, *target)
+	checker := NewProxyChecker(proxyURLs, time.Duration(*timeout)*time.Second, 0, 1*time.Second, 50, logCallback, progressCallback, *target)
 	defer checker.Cancel()
 
-	log.Println("Starting proxy checking Press Ctrl+C to cancel")
+	// ANSI color codes
+	red := "\033[31m"
+	green := "\033[32m"
+	yellow := "\033[33m"
+	blue := "\033[34m"
+	reset := "\033[0m"
+
+	fmt.Println(yellow + "============================================" + reset)
+	fmt.Println(green + " Proxy Checker by " + red + "lilsheepyy" + reset)
+	fmt.Println(blue + " GitHub: https://github.com/lilsheepyy" + reset)
+	fmt.Println(yellow + "============================================" + reset)
+
 	checker.Run(*maxChecks)
 	log.Println("Done")
 }
