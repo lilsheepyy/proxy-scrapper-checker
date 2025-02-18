@@ -1,6 +1,7 @@
 # ProxyChecker
 
 **ProxyChecker** is a high-performance Go-based proxy checker that supports **SOCKS4, SOCKS5, and HTTP** proxies. It fetches, sanitizes, and tests proxies against a given target, allowing users to efficiently verify working proxies.
+
 With the ability to **scrape approximately 350,000 proxies per type**, ProxyChecker ensures a vast selection of proxies to work with.
 
 ---
