@@ -13,7 +13,8 @@ With the ability to **scrape approximately 350,000 proxies per type**, ProxyChec
 - **Concurrency support** with configurable worker limits  
 - **Progress tracking** and logging  
 - Saves working proxies in **categorized files**  
-- Graceful cancellation support using **context**  
+- Graceful cancellation support using **context**
+- Silly cat when running
 
 ---
 
@@ -30,17 +31,17 @@ go run main.go
 
 ## Options
 
-- -max-checks → Maximum concurrent proxy checks (default: 5000) I recommend lowering this for a better output even if it takes more time
+- -max-checks → Maximum concurrent proxy checks (default: 1000) I recommend lowering this for a better output even if it takes more time, this also depends on your server
 - -target → IP and port to test proxies against (default: 1.1.1.1:80)
+- -timeout → Timeout in seconds for proxy connections
 
 ## Example
 ```sh
-go run main.go -target 1.1.1.1:80 -max-checks 100
+go run main.go -target 1.1.1.1:80 -max-checks 100 -timeout 5
 ```
 
 ## TODO
 - Make a better sanitization system
-- Add timeout control via flag
 - Anything else that I think off
 
 Thanks for using!
