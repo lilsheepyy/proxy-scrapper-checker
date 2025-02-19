@@ -37,8 +37,9 @@ go run main.go
 
 ## Example
 ```sh
-go run main.go -target 1.1.1.1:80 -max-checks 100 -timeout 5
+go run main.go -target 1.1.1.1:80 -max-checks 1000 -timeout 5
 ```
+IF YOU ARE GETTING 5 PROXIES WORKING, LOWER YOUR SETTINGS
 
 ## TODO
 - Make a better sanitization system
