@@ -39,7 +39,9 @@ go run main.go
 ```sh
 go run main.go -target 1.1.1.1:80 -max-checks 1000 -timeout 5
 ```
+## DISCLAIMER
 IF YOU ARE GETTING 5 PROXIES WORKING, LOWER YOUR SETTINGS
+THIS ONLY CHECKS IF THE PROXY CAN PERFORM TCP RAW CONNECTIONS (im working on checking traffic thru it)
 
 ## TODO
 - Make a better sanitization system
