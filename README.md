@@ -14,7 +14,7 @@ With the ability to **scrape approximately 350,000 proxies per type**, ProxyChec
 - **Progress tracking** and logging  
 - Saves working proxies in **categorized files**  
 - Graceful cancellation support using **context**
-- Silly cat when running
+- Silly cat when running ^^
 
 ---
 
