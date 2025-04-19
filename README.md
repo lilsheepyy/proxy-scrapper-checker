@@ -48,4 +48,11 @@ THIS ONLY CHECKS IF THE PROXY CAN PERFORM TCP RAW CONNECTIONS (im working on che
 - Make a better sanitization system
 - Anything else that I think off
 
+---
+
+## Contact
+
+- Telegram: [t.me/sheepthesillycat](https://t.me/sheepthesillycat)
+- Website: [sheepyy.love](https://sheepyy.love)
+  
 Thanks for using!
