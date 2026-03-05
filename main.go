@@ -398,15 +398,48 @@ func (pc *ProxyChecker) SaveWorkingProxies(proxyType string, proxies []string) {
 	pc.Log("INFO", fmt.Sprintf("Saved %d working %s proxies to %s", len(proxies), proxyType, finalPath))
 }
 
+// Saves sanitized proxies without checking
+func (pc *ProxyChecker) SaveSanitizedProxies(proxyType string, proxies []string) {
+	finalDir := "proxies"
+	os.MkdirAll(finalDir, os.ModePerm)
+	finalPath := fmt.Sprintf("%s/%s.txt", finalDir, strings.ToUpper(proxyType))
+
+	file, err := os.Create(finalPath)
+	if err != nil {
+		pc.Log("ERROR", fmt.Sprintf("Failed to save sanitized %s proxies: %v", proxyType, err))
+		return
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	for _, proxy := range proxies {
+		fmt.Fprintln(writer, proxy)
+	}
+	writer.Flush()
+	pc.Log("INFO", fmt.Sprintf("Saved %d sanitized %s proxies to %s", len(proxies), proxyType, finalPath))
+}
+
 // Processes all proxy types and checks their functionality
-func (pc *ProxyChecker) Run(maxChecks int) {
+func (pc *ProxyChecker) Run(maxChecks int, check bool) {
 	for proxyType, urls := range pc.ProxyURLs {
 		if pc.CancelContext.Err() != nil {
 			break
 		}
 		pc.Log("INFO", fmt.Sprintf("%s", strings.Repeat("=", 40)))
-		pc.Log("INFO", fmt.Sprintf("Processing %s proxies", strings.ToUpper(proxyType)))
+		if check {
+			pc.Log("INFO", fmt.Sprintf("Processing %s proxies (scrape + sanitize + check)", strings.ToUpper(proxyType)))
+		} else {
+			pc.Log("INFO", fmt.Sprintf("Processing %s proxies (scrape + sanitize only)", strings.ToUpper(proxyType)))
+		}
 		pc.Log("INFO", fmt.Sprintf("%s", strings.Repeat("=", 40)))
+
+		if !check {
+			rawProxies := pc.GetProxies(urls)
+			sanitized := pc.SanitizeProxies(rawProxies)
+			pc.SaveSanitizedProxies(proxyType, sanitized)
+			continue
+		}
+
 		pc.ProcessProxies(proxyType, urls, maxChecks)
 	}
 }
@@ -429,6 +462,7 @@ func main() {
 	maxChecks := flag.Int("max-checks", 1000, "Maximum number of concurrent proxy checks")
 	target := flag.String("target", "1.1.1.1:80", "Target IP and Port for checking proxies in the format ip:port")
 	timeout := flag.Int("timeout", 5, "Timeout in seconds for proxy connections")
+	check := flag.Bool("check", false, "Enable proxy checking after scraping and sanitizing (default: false)")
 	flag.Parse()
 
 	proxyURLs := LoadURLsFromJSON("urls.json")
@@ -458,6 +492,6 @@ func main() {
 	fmt.Println(blue + " GitHub: https://github.com/lilsheepyy" + reset)
 	fmt.Println(yellow + "============================================" + reset)
 
-	checker.Run(*maxChecks)
+	checker.Run(*maxChecks, *check)
 	log.Println("Done")
 }

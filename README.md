@@ -1,6 +1,6 @@
 # ProxyChecker
 
-**ProxyChecker** is a high-performance Go-based proxy checker that supports **SOCKS4, SOCKS5, and HTTP** proxies. It fetches, sanitizes, and tests proxies against a given target, allowing users to efficiently verify working proxies.
+**ProxyChecker** is a high-performance Go-based proxy checker that supports **SOCKS4, SOCKS5, and HTTP** proxies. By default it fetches and sanitizes proxies, and can optionally test them against a target when checking mode is enabled.
 
 With the ability to **scrape approximately 350,000 proxies per type**, ProxyChecker ensures a vast selection of proxies to work with.
 
@@ -34,10 +34,16 @@ go run main.go
 - -max-checks → Maximum concurrent proxy checks (default: 1000) I recommend lowering this for a better output even if it takes more time, this also depends on your server
 - -target → IP and port to test proxies against (default: 1.1.1.1:80)
 - -timeout → Timeout in seconds for proxy connections
+- -check → Enable proxy checking after scraping and sanitizing (default: false)
 
 ## Example
 ```sh
-go run main.go -target 1.1.1.1:80 -max-checks 1000 -timeout 5
+go run main.go
+```
+
+## Example with checking enabled
+```sh
+go run main.go -check -target 1.1.1.1:80 -max-checks 1000 -timeout 5
 ```
 ## DISCLAIMER
 IF YOU ARE GETTING 5 PROXIES WORKING, LOWER YOUR SETTINGS
