@@ -1,6 +1,6 @@
-# Verificador de Proxies
+# UltraProxy
 
-**Verificador de Proxies** es un verificador de proxies en Go, orientado a alto rendimiento, con soporte para proxies **SOCKS4, SOCKS5 y HTTP**. Por defecto obtiene y sanitiza proxies, y de forma opcional puede probarlos contra un objetivo cuando se habilita el modo de verificacion.
+**UltraProxy** es un scrapper y verificador de proxies en Go, enfocado al alto rendimiento, con soporte para proxies **SOCKS4, SOCKS5 y HTTP**. Por defecto obtiene y sanitiza proxies, y de forma opcional puede probarlos cuando se habilita el modo de verificacion.
 
 Con capacidad de **extraer aproximadamente 350.000 proxies por tipo**, ofrece una base amplia de proxies para trabajar.
 
@@ -14,7 +14,7 @@ Con capacidad de **extraer aproximadamente 350.000 proxies por tipo**, ofrece un
 - **Seguimiento de progreso** y logs
 - Guarda proxies funcionales en **archivos categorizados**
 - Soporte de cancelacion elegante usando **context**
-- Gatito tonto al ejecutar ^^
+- Un gatito ^^
 
 ---
 
@@ -51,7 +51,7 @@ go run main.go -check -target 1.1.1.1:80 -max-checks 1000 -timeout 5
 
 SI SOLO TE ESTAN FUNCIONANDO 5 PROXIES, BAJA TUS AJUSTES.
 
-ESTO SOLO COMPRUEBA SI EL PROXY PUEDE HACER CONEXIONES TCP EN BRUTO (estoy trabajando en comprobar trafico a traves del proxy)
+ESTO SOLO COMPRUEBA SI EL PROXY PUEDE HACER CONEXIONES TCP RAW (estoy trabajando en comprobar trafico a traves del proxy)
 
 ## TODO
 
@@ -66,3 +66,4 @@ ESTO SOLO COMPRUEBA SI EL PROXY PUEDE HACER CONEXIONES TCP EN BRUTO (estoy traba
 - Web: [sheepyy.love](https://sheepyy.love)
 
 Gracias por usarlo.
+Despues de 2 años he decidido continuar este proyecto.
